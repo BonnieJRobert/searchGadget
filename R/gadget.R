@@ -10,7 +10,8 @@ require(dplyr)
 require(janitor)
 
 url_home <- 'https://catalogue.data.gov.bc.ca'
-url_sub <- '/dataset?sort=metadata_modified+desc&q='
+url_dat <- '/dataset?q='
+url_end <- '&sort=score+desc%2C+record_publish_date+desc'
 
 #function scrapes a url and returns names of datasets on each page
 get_ds_titles <- function(u){
@@ -39,7 +40,7 @@ create_url_from_title <- function(ttl) {
     paste(url, "-", sep = "")
   }
 
-  url <- paste("https://catalogue.data.gov.bc.ca/dataset/", url, sep = "")
+  url <- paste(url_home, url_dat, url, url_end, sep = "")
 
   return(url)
 }
@@ -53,6 +54,8 @@ clean_search_string <- function(val) {
 
   #replace whitespace with '+'
   val <- gsub("\\s+", "+", val)
+
+  #could change case here
 
   return(val)
 }
@@ -82,12 +85,13 @@ search_data_bc <- function() {
     observeEvent(input$search_1, {
 
       search_string = clean_search_string(input$search_box_1)
-      url <- paste(url_home, url_sub, search_string , sep = "")
+
+      url <- paste(url_home, url_dat, search_string, url_end, sep = "")
       webpage <- read_html(url)
 
       #get page urls from first page
       pages <- html_nodes(webpage,'.pagination-centered a') %>% html_text()
-
+      pages <- suppressWarnings(as.numeric(pages))
       x = seq(min(as.numeric(pages), na.rm=TRUE),
               max(as.numeric(pages), na.rm=TRUE),
               by = 1)
@@ -95,7 +99,6 @@ search_data_bc <- function() {
       page_urls <- paste(url, "&page=", x, sep = "")
 
       #get dataset titles/names
-
       #error handling if the search returns no values
       min_p <- input$slider_1[1]
       max_p <- input$slider_1[2]
