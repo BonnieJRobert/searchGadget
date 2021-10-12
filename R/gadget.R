@@ -33,14 +33,33 @@ create_url_from_title <- function(ttl) {
 
   url <- janitor::make_clean_names(ttl)
   url <- gsub("_", "-", url)
-  url <- paste("", url, sep = "")
 
   #handle case when title ends in a )
   if (grepl(")$", ttl)) {
-    paste(url, "-", sep = "")
+    url <- paste(url, "-", sep = "")
   }
 
   url <- paste(url_home, url_dat, url, url_end, sep = "")
+
+  return(url)
+}
+
+#function takes a dataset title and creates a url
+create_dip_url_from_title <- function(ttl) {
+
+  #handle NULL
+  if (is.null(ttl))
+    ttl <- ""
+
+  url <- gsub("\\+", "-", ttl)
+  url <- tolower(url)
+
+  #handle case when title ends in a )
+  if (grepl(")$", ttl)) {
+    url <- paste(url, "-", sep = "")
+  }
+
+  url <- paste(url_home, "/dataset/", url, sep = "")
 
   return(url)
 }
@@ -67,17 +86,28 @@ search_data_bc <- function() {
     #include title banner and close buttons
     gadgetTitleBar("Enter search criteria", left = NULL),
 
-    miniContentPanel(
-        textInput("search_box_1", "Search Criteria", ""),  #input testing required. currently takes a single word
-        sliderInput("slider_1", "Number of Pages", min = 1, max = 10, value = c(1,2)),
-        actionButton("search_1", "Go"),
-        headerPanel(""),
-        headerPanel(""),
-        textInput("search_box_2", "Lookup Dataset Title", ""),
-        actionButton("search_2", "Go"),
-        actionButton("search_dip", "Go")
+    miniTabstripPanel(
+      miniTabPanel("DataBC Data", icon = icon("table"),
+        miniContentPanel(
+          textInput("search_box_1", "Search Criteria", ""),  #input testing required. currently takes a single word
+          sliderInput("slider_1", "Number of Pages", min = 1, max = 10, value = c(1,2)),
+          actionButton("search_1", "Go"),
+          headerPanel(""),
+          headerPanel(""),
+          textInput("search_box_2", "Lookup Dataset Title", ""),
+          actionButton("search_2", "Go")
+        )
+      ),
+      miniTabPanel("DIP Data", icon = icon("table"),
+        miniContentPanel(
+          actionButton("search_dip_1", "Show DIP Datasets"),
+          headerPanel(""),
+          headerPanel(""),
+          textInput("search_box_dip", "Lookup DIP Metadata", ""),
+          actionButton("search_dip_2", "Go")
+        )
       )
-
+    )
   )
 
   server <- function(input, output, session) {
@@ -126,7 +156,7 @@ search_data_bc <- function() {
 
 
     #print description of given dataset in databc (dataset title)
-    observeEvent(input$search_dip, {
+    observeEvent(input$search_dip_1, {
 
       url <- 'https://catalogue.data.gov.bc.ca/group/data-innovation-program'
 
@@ -140,11 +170,33 @@ search_data_bc <- function() {
               by = 1)
 
       page_urls <- paste(url, "?page=", x, sep = "")
-      browser()
       l <- lapply(page_urls, get_ds_titles)
 
       print(unlist(l))
 
+    })
+
+
+    #print description of given dataset in databc (dataset title)
+    observeEvent(input$search_dip_2, {
+
+      search_string = clean_search_string(input$search_box_dip)
+      url <- create_dip_url_from_title(search_string)
+
+      desc <- read_html(url) %>%
+        html_nodes(xpath = '//meta[@property="og:description"]') %>%
+        html_attr('content')
+
+      print(desc)
+
+      ds <- read_html(url) %>%
+        html_elements(".resource-url-analytics") %>%
+        html_text(trim = TRUE)
+
+      ds <- ds[which(ds != 'Download')]
+      ds <- gsub("csv", "\\.csv", ds)
+
+      print(ds)
     })
 
     #close app when done pressed
