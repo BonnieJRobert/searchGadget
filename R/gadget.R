@@ -74,7 +74,8 @@ search_data_bc <- function() {
         headerPanel(""),
         headerPanel(""),
         textInput("search_box_2", "Lookup Dataset Title", ""),
-        actionButton("search_2", "Go")
+        actionButton("search_2", "Go"),
+        actionButton("search_dip", "Go")
       )
 
   )
@@ -120,6 +121,29 @@ search_data_bc <- function() {
         html_attr('content')
 
       print(desc)
+
+    })
+
+
+    #print description of given dataset in databc (dataset title)
+    observeEvent(input$search_dip, {
+
+      url <- 'https://catalogue.data.gov.bc.ca/group/data-innovation-program'
+
+      webpage <- read_html(url)
+
+      #get page urls from first page
+      pages <- html_nodes(webpage,'.pagination-centered a') %>% html_text()
+      pages <- suppressWarnings(as.numeric(pages))
+      x = seq(min(as.numeric(pages), na.rm=TRUE),
+              max(as.numeric(pages), na.rm=TRUE),
+              by = 1)
+
+      page_urls <- paste(url, "?page=", x, sep = "")
+      browser()
+      l <- lapply(page_urls, get_ds_titles)
+
+      print(unlist(l))
 
     })
 
